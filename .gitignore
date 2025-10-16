@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Entornos virtuales
+venv/
+.env/
+ENV/
+.venv/
+
+# Logs
+*.log
+
+# Bases de datos locales
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos generados por Django
+media/
+staticfiles/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scripts utilitarios en raíz
+/*.sh
+
+# Archivos de migración temporales
+**/migrations/__pycache__/
+
+# Archivos Python en raíz (excepto manage.py)
+/*.py
+!manage.py
+
+# Site-packages específicos
+venv/lib/python3.12/site-packages/
+
+# Archivos de desarrollo interno
+README-develop.md
+
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+venv/
+db.sqlite3

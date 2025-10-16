@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% load disponibilidad_filters %}
+
+{% block title %}Mi Disponibilidad - NeusiDevops{% endblock %}
+
+{% block content %}
+<style>
+.disponibilidad-container {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+.grid-disponibilidad {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+    gap: 2px;
+    min-width: 800px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.header-dia {
+    background: #343a40;
+    color: white;
+    text-align: center;
+    padding: 10px 5px;
+    font-weight: bold;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.hora-label {
+    background: #6c757d;
+    color: white;
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.celda-horario {
+    min-height: 35px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    user-select: none;
+}
+
+.celda-horario:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.estado-disponible {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+.estado-vacio {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+    color: #6c757d;
+    border: 1px dashed #adb5bd;
+}
+
+.herramientas {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modo-seleccion {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-modo {
+    padding: 12px 25px;
+    border: 2px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    text-align: center;
+    min-width: 140px;
+}
+
+.btn-modo.activo {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.modo-disponible {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.modo-borrar {
+    background: #e9ecef;
+    border-color: #6c757d;
+    color: #495057;
+}
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Disponibilidad Semanal</h2>
+                <div>
+                    <a href="{% url 'disponibilidad:equipo_disponibilidad' %}" class="btn btn-info">
+                        Ver Equipo
+                    </a>
+                    <a href="{% url 'backlog_lista' %}" class="btn btn-secondary">
+                        Volver al Inicio
+                    </a>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Estado:</strong> {{ mensaje_edicion }}
+                <br><small><strong>Instrucciones:</strong> Selecciona un modo abajo y haz clic en los horarios para marcar tu disponibilidad</small>
+            </div>
+
+            <!-- Herramientas de selecci??n -->
+            <div class="herramientas">
+                <h4>Herramientas de Edici??n</h4>
+                <div class="modo-seleccion">
+                    <div class="btn-modo modo-disponible" data-estado="disponible">
+                        Disponible
+                    </div>
+                    <div class="btn-modo modo-borrar" data-estado="vacio">
+                        Limpiar
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-outline-primary btn-sm" onclick="llenarHorarioOficina()">
+                        Horario oficina (8-17h)
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="limpiarTodo()">
+                        Limpiar todo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid principal -->
+            <div class="disponibilidad-container">
+                <div class="grid-disponibilidad">
+                    <!-- Header vac??o -->
+                    <div></div>
+                    
+                    <!-- Headers de d??as -->
+                    {% for dia_num, dia_nombre in dias_semana %}
+                    <div class="header-dia">{{ dia_nombre }}</div>
+                    {% endfor %}
+
+                    <!-- Filas de horarios -->
+                    {% for hora in horas %}
+                    <div class="hora-label">{{ hora|stringformat:"02d" }}:00</div>
+                    {% for dia_num, dia_nombre in dias_semana %}
+                    {% with horarios_matriz|lookup:dia_num|lookup:hora as horario %}
+                    <div class="celda-horario {% if horario and horario.estado == 'disponible' %}estado-disponible{% else %}estado-vacio{% endif %}"
+                         data-dia="{{ dia_num }}" 
+                         data-hora="{{ hora }}"
+                         title="{{ dia_nombre }} {{ hora }}:00">
+                        {% if horario and horario.estado == 'disponible' %}
+                            S??
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <p><strong>Leyenda:</strong>
+                <span class="badge bg-success">Verde = Disponible</span>
+                <span class="badge bg-secondary">Gris = No disponible</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+<script>
+let modoActual = 'disponible';
+
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarHerramientas();
+    inicializarCeldas();
+});
+
+function inicializarHerramientas() {
+    document.querySelector('.btn-modo[data-estado="disponible"]').classList.add('activo');
+    
+    document.querySelectorAll('.btn-modo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.btn-modo').forEach(b => b.classList.remove('activo'));
+            this.classList.add('activo');
+            modoActual = this.dataset.estado;
+        });
+    });
+}
+
+function inicializarCeldas() {
+    const celdas = document.querySelectorAll('.celda-horario');
+    
+    celdas.forEach(celda => {
+        celda.addEventListener('click', function() {
+            if (!{{ puede_editar|yesno:"true,false" }}) {
+                alert('{{ mensaje_edicion }}');
+                return;
+            }
+            cambiarEstadoCelda(this, modoActual);
+        });
+    });
+}
+
+function cambiarEstadoCelda(celda, nuevoEstado) {
+    const dia = parseInt(celda.dataset.dia);
+    const hora = parseInt(celda.dataset.hora);
+    
+    actualizarCeldaVisual(celda, nuevoEstado);
+    
+    fetch('{% url "disponibilidad:actualizar_horario" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            dia_semana: dia,
+            hora: hora,
+            estado: nuevoEstado === 'vacio' ? 'ocupado' : nuevoEstado
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Error:', data.error);
+            alert('Error al actualizar: ' + data.error);
+        }
+    });
+}
+
+function actualizarCeldaVisual(celda, estado) {
+    celda.classList.remove('estado-disponible', 'estado-vacio');
+    
+    if (estado === 'vacio') {
+        celda.classList.add('estado-vacio');
+        celda.textContent = '-';
+    } else {
+        celda.classList.add('estado-disponible');
+        celda.textContent = 'S??';
+    }
+}
+
+function llenarHorarioOficina() {
+    if (!confirm('??Marcar horario de oficina (8:00 - 17:00, Lunes a Viernes) como disponible?')) return;
+    
+    for (let dia = 0; dia < 5; dia++) {
+        for (let hora = 8; hora < 17; hora++) {
+            const celda = document.querySelector(`.celda-horario[data-dia="${dia}"][data-hora="${hora}"]`);
+            if (celda) {
+                cambiarEstadoCelda(celda, 'disponible');
+            }
+        }
+    }
+}
+
+function limpiarTodo() {
+    if (!confirm('??Est??s seguro de que quieres limpiar toda tu disponibilidad?')) return;
+    
+    document.querySelectorAll('.celda-horario').forEach(celda => {
+        cambiarEstadoCelda(celda, 'vacio');
+    });
+}
+</script>
+{% endblock %}
