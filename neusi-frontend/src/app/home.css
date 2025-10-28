@@ -1,0 +1,120 @@
+/* Reset mínimo */
+:root{
+  --bg1:#3b0764; --bg2:#6d28d9; --bg3:#7c3aed;
+  --panel:#1a1433; --panel-2:#221a44;
+  --text:#f8f9ff; --muted:#cbd5e1;
+  --blue:#1e78ff; --green:#18a357; --purple:#6d4be0; --teal:#0ea5a5;
+  --radius:18px;
+  --shadow:0 20px 60px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+
+/* Fondo degradado base (canvas se superpone) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background: radial-gradient(1200px 700px at 15% -20%, rgba(255,122,122,.22), transparent 60%),
+              radial-gradient(1000px 600px at 85% 10%, rgba(109,40,217,.35), transparent 60%),
+              linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+}
+
+.bg-canvas{
+  position:fixed; inset:0; z-index:-1; width:100vw; height:100vh; pointer-events:none;
+}
+
+.home-root{ width:min(1200px,92vw); margin:28px auto 80px; }
+
+/* Topbar */
+.home-topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(10px);
+  border-radius: 16px; padding: 12px 16px; box-shadow: var(--shadow);
+}
+.brand{ display:flex; align-items:center; gap:10px }
+.brand-logo{ border-radius:999px; background:#fff; padding:2px }
+.brand-fallback{
+  display:none; place-items:center;
+  width:36px; height:36px; border-radius:999px; background:#fff; color:#221a44; font-weight:900;
+}
+.brand-title{ font-weight:800; letter-spacing:.1px }
+
+.top-actions{ display:flex; align-items:center; gap:12px }
+.hello{ color:var(--muted) }
+.btn-ghost{
+  padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35);
+  background:transparent; color:#fff; font-weight:800; cursor:pointer;
+  transition: filter .18s, transform .06s;
+}
+.btn-ghost:hover{ filter:brightness(1.1) }
+.btn-ghost:active{ transform:translateY(1px) }
+
+/* Hero */
+.home-hero{ margin:34px 4px 22px }
+.home-hero h1{ margin:0 0 8px; font-size: clamp(1.9rem, 1.3vw + 1.2rem, 2.4rem); font-weight:900 }
+.home-hero p{ margin:0; color:var(--muted) }
+
+/* Tiles */
+.tiles{
+  display:grid; gap:18px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35));
+  border:1px solid rgba(255,255,255,.08);
+  border-radius: 20px; padding: 22px; box-shadow: var(--shadow);
+}
+.tile{
+  display:grid; grid-template-rows:auto auto 1fr; gap:6px;
+  align-content:flex-start;
+  padding:18px; border-radius:16px; text-decoration:none; color:#fff;
+  border:1px solid rgba(255,255,255,.1);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  transition: transform .12s, box-shadow .18s, filter .18s;
+}
+.tile:hover{ transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 20px 50px rgba(0,0,0,.35) }
+.tile-icon{ font-size:22px; opacity:.9 }
+.tile-title{ font-weight:900; letter-spacing:.2px }
+.tile-desc{ color:var(--muted); font-size:.98rem }
+
+.tile--blue{ border-left:6px solid var(--blue) }
+.tile--green{ border-left:6px solid var(--green) }
+.tile--purple{ border-left:6px solid var(--purple) }
+.tile--teal{ border-left:6px solid var(--teal) }
+
+/* Quick section */
+.quick{ margin:28px 4px 0 }
+.quick-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px }
+.quick-emoji{ filter:drop-shadow(0 3px 6px rgba(0,0,0,.35)) }
+.chips{ display:flex; flex-wrap:wrap; gap:10px }
+.chip{
+  padding:10px 14px; border-radius:999px; font-weight:800; color:#221a44;
+  background:#fff; text-decoration:none; box-shadow:0 8px 24px rgba(0,0,0,.25);
+  transition: transform .12s, filter .18s;
+}
+.chip:hover{ transform: translateY(-2px); filter:brightness(1.03) }
+
+/* Miscelánea */
+.home-loading{ margin: 80px auto; text-align:center; color:#fff }
+.err{ margin-top:12px; color:#ffb4b4; font-weight:700 }
+
+/* ====== Tiles “cover”: icono centrado que cambia a texto ====== */
+.tiles--cover .tile{ position:relative; overflow:hidden; min-height:160px }
+.tile-face{
+  position:absolute; inset:0; display:grid; place-items:center;
+  padding:20px; transition: opacity .25s ease, transform .25s ease;
+}
+.tile-face--icon{ opacity:1; transform:scale(1) }
+.tile-face--icon .ico{ width:64px; height:64px; color:#fff }
+.tile-face--text{
+  opacity:0; transform: translateY(8px); text-align:left; align-content:center;
+}
+.tile-face--text h3{ margin:0 0 6px; font-size:1.15rem; font-weight:900 }
+.tile-face--text p{ margin:0; color:var(--muted) }
+
+/* Hover/Focus: muestra texto */
+.tile.cover:is(:hover,:focus-visible,.is-hover) .tile-face--icon{ opacity:0; transform:scale(.92) }
+.tile.cover:is(:hover,:focus-visible,.is-hover) .tile-face--text{ opacity:1; transform:translateY(0) }
+
+/* Colores de borde existentes */
