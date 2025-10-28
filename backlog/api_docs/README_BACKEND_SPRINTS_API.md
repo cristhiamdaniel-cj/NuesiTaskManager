@@ -1,104 +1,97 @@
-#  NEUSI Task Manager – API de Sprints (Backend)
+NEUSI Task Manager – API de Sprints (Backend)
 
-**Módulo:** Gestión de Sprints  
-**Framework:** Django 5.2  
-**Ruta base:** `/api/backlog/sprints/`  
-**Versión:** Octubre 2025  
-**Desarrollado por:** Jorge Cardona
+Módulo: Gestión de Sprints
+Framework: Django 5.2
+Ruta base: /api/backlog/sprints/
+Versión: Octubre 2025
+Desarrollado por: Jorge Cardona
+=========================================================================
+Descripción general
 
-
---------------------------------------------------------------------------------------
-
-##  Descripción general
-Los **sprints** definen los ciclos de trabajo del backlog.  
-Cada tarea (`/tareas/`) debe pertenecer a un sprint activo.
-
---------------------------------------------------------------------------------------
-
+Los sprints representan los ciclos de trabajo del backlog.
+Cada sprint agrupa tareas y épicas, definiendo fechas de inicio y fin.
+=========================================================================
 Endpoints principales
+1️⃣ Crear sprint
 
-1 Crear sprint
-**POST** `/api/backlog/sprints/`
-```json
+POST /api/backlog/sprints/
+Headers:
+
+Content-Type: application/json
+X-CSRFToken: <valor de la cookie csrftoken>
+
+
+Body:
+
 {
-  "nombre": "Sprint 1",
-  "inicio": "2025-10-10",
-  "fin": "2025-10-24"
+  "nombre": "Sprint 10 - Octubre",
+  "inicio": "2025-10-28",
+  "fin": "2025-11-08",
+  "objetivo": "Pruebas de integración backlog + matriz"
 }
 
-Respuesta (201):
-{ "id": 1, "nombre": "Sprint 1", "inicio": "2025-10-10", "fin": "2025-10-24" }
---------------------------------------------------------------------------------------
-2 Listar sprints
+
+Respuesta 201:
+
+{
+  "id": 5,
+  "nombre": "Sprint 10 - Octubre",
+  "inicio": "2025-10-28",
+  "fin": "2025-11-08",
+  "objetivo": "Pruebas de integración backlog + matriz"
+}
+=========================================================================
+2️⃣ Listar sprints
 
 GET /api/backlog/sprints/
 
-Respuesta:
-
 [
-  { "id": 1, "nombre": "Sprint 1", "inicio": "2025-10-10", "fin": "2025-10-24" }
+  { "id": 1, "nombre": "Sprint 9", "inicio": "2025-10-10", "fin": "2025-10-20" },
+  { "id": 2, "nombre": "Sprint 10", "inicio": "2025-10-28", "fin": "2025-11-08" }
 ]
+=========================================================================
+3️⃣ Actualizar (PATCH)
 
---------------------------------------------------------------------------------------
+PATCH /api/backlog/sprints/{id}/
 
-3 Consultar sprint por ID
+{ "objetivo": "Revisión de backlog y testing final" }
 
-GET /api/backlog/sprints/{id}/
 
-Respuesta:
+Respuesta 200:
 
-{
-  "id": 1,
-  "nombre": "Sprint 1",
-  "inicio": "2025-10-10",
-  "fin": "2025-10-24"
-}
+{ "id": 5, "nombre": "Sprint 10 - Octubre", "objetivo": "Revisión de backlog y testing final" }
+=========================================================================
+4️⃣ Reemplazar completamente (PUT)
 
---------------------------------------------------------------------------------------
-
-4 Actualizar sprint
-
-PATCH o PUT /api/backlog/sprints/{id}/
+PUT /api/backlog/sprints/{id}/
 
 {
-  "nombre": "Sprint 1 – Actualizado",
-  "inicio": "2025-10-11",
-  "fin": "2025-10-25"
+  "nombre": "Sprint Final",
+  "inicio": "2025-11-10",
+  "fin": "2025-11-25",
+  "objetivo": "Entrega final del sistema"
 }
-
---------------------------------------------------------------------------------------
-
-5 Eliminar sprint
+=========================================================================
+5️⃣ Eliminar sprint
 
 DELETE /api/backlog/sprints/{id}/
+Respuesta 204: (sin contenido)
+=========================================================================
+Reglas para el Frontend
 
-Respuesta:
-204 No Content
-
---------------------------------------------------------------------------------------
-
-Reglas para el Frontend (Next.js)
-
-Cada tarea debe asociarse a un sprint existente (sprint_id).
-Los sprints se listan para dropdowns o select de planificación.
-
---------------------------------------------------------------------------------------
-
-Headers estándar:
-Content-Type: application/json
-X-CSRFToken: <valor cookie csrftoken>
-
---------------------------------------------------------------------------------------
-
+Debe mostrarse como lista o calendario con rango de fechas.
+Asociar tareas y épicas por sprint_id.
+Solo usuarios con permisos Backlog Admin pueden crear o editar.
+Usa siempre credentials: "include" y X-CSRFToken.
+=========================================================================
 Estado del módulo
-Funcionalidad              	Estado	Observaciones
-Crear Sprint	               ✅	Probado curl
-Listar Sprints                 ✅	Probado curl
-Editar Sprint	               ✅	Probado curl
-Eliminar Sprint	               ✅	Probado curl
-Relación con Tareas	           ✅	Integrada
-
---------------------------------------------------------------------------------------
-
-Autor: Jorge Cardona – Backend Developer
-Octubre 2025
+Funcionalidad	Estado
+Crear	✅ OK
+Listar	✅ OK
+Editar / PATCH	✅ OK
+Eliminar	✅ OK
+CSRF y sesión	✅ OK
+=========================================================================
+Autor: Jorge Luis Cardona Gregory
+Rol: Backend Developer
+Fecha: Octubre 2025

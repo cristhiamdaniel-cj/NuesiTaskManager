@@ -1,0 +1,105 @@
+Guía práctica (Frontend) · Replicar “Backlog en Lista” en Next.js
+
+0) Objetivo
+Construir en Next.js una vista “Backlog en Lista” con filtros (persona, sprint, épica, estado), agrupación (por proyecto/épica/sprint/ninguno) y tarjetas de tareas, consumiendo la API Django.
+
+1) Requisitos previos (leer antes de tocar código)
+1. Backend corriendo en local:
+   - python manage.py runserver 0.0.0.0:8076
+   - Base URL: http://localhost:8076
+   - API Backlog: http://localhost:8076/api/backlog/
+   - API Auth:    http://localhost:8076/api/auth/
+2. Frontend:
+   - cd neusi-frontend
+   - Crear/confirmar .env.local con:
+       NEXT_PUBLIC_API_BASE=http://localhost:8076
+   - Correr: npm run dev
+3. Autenticación por cookies (ver README_AUTH_BACKEND_LOGIN.md)
+   - Antes de POST/DELETE/PATCH/PUT → GET /api/auth/csrf/
+   - Siempre usar credentials: 'include'.
+   - Si /api/backlog/... responde HTML o 403 → sesión vencida → redirigir a /login.
+
+2) Rutas/archivos que vas a crear en el frontend
+neusi-frontend/
+└─ src/
+   ├─ lib/
+   │  └─ api.ts                # helper fetch con cookies (ya existe)
+   ├─ app/
+   │  ├─ backlog/
+   │  │  ├─ page.tsx           # Página “Backlog en Lista”
+   │  │  └─ backlog.css        # Estilos de la vista
+   │  └─ login/                # ya existe
+   └─ components/
+      ├─ BacklogFilters.tsx    # (opcional) barra filtros
+      ├─ TaskCard.tsx          # (opcional) tarjeta tarea
+      └─ GroupAccordion.tsx    # (opcional) acordeón
+public/
+└─ backlog/
+   └─ img/
+      └─ logo.png              # imágenes de esta vista
+
+Nota: Puedes empezar solo con src/app/backlog/page.tsx y src/app/backlog/backlog.css.
+
+3) Endpoints que vas a consumir (ver READMEs por módulo)
+- GET  /api/backlog/tareas/?persona=&sprint=&epica=&estado=&mine=1
+- GET  /api/backlog/epicas/
+- GET  /api/backlog/sprints/
+- GET  /api/backlog/integrantes/
+- (opcional tablero) GET /api/backlog/matriz/
+- PATCH /api/backlog/tareas/{id}/categoria/  body: { "categoria": "UI|NUI|UNI|NUNI" }
+- PATCH /api/backlog/tareas/{id}/estado/     body: { "estado": "COMPLETADO|..." }
+
+4) Helper de API (src/lib/api.ts) – confirmar que tengas algo así
+(ya existe en el proyecto; valida que tengas:)
+- ensureCsrf() → GET /api/auth/csrf/
+- me(), login(), logout()
+- fetchIntegrantes(), fetchEpicas(), fetchSprints(), fetchTareas(params)
+- patchTareaCategoria(id, categoria)
+- patchTareaEstado(id, estado)
+Todos con credentials:'include' y X-CSRFToken en métodos de escritura.
+
+5) Estilos específicos (src/app/backlog/backlog.css)
+btn, badges UI/NUI/UNI/NUNI, tarjeta .tarea-card, .filters, .acc (acordeón).
+
+6) Página (src/app/backlog/page.tsx)
+- useEffect: validar sesión con me(); si no, router.replace('/login')
+- Estado local: persona, sprint, epica, estado, group
+- Carga paralela de opciones: fetchIntegrantes, fetchSprints, fetchEpicas
+- Carga de tareas: fetchTareas({ persona, sprint, epica, estado })
+- Guardar filtros en querystring (URLSearchParams)
+- Agrupación local por:
+  - proyecto (por defecto, caer a “(Sin proyecto)” si no llega)
+  - épica (t.epica?.titulo || “(Sin épica)”)
+  - sprint (t.sprint ? “Sprint inicio - fin” : “(Sin sprint)”)
+  - none (lista plana)
+- TaskCard:
+  - muestra título, épica, sprint, asignados, estado
+  - botón “Cambiar categoría” → patchTareaCategoria
+  - botón “✅ Cerrar tarea” (si no completada) → patchTareaEstado
+
+7) Dónde poner imágenes / CSS / JS
+- Imágenes de esta vista: public/backlog/img/... (se usan como /backlog/img/archivo.png)
+- CSS específico: src/app/backlog/backlog.css
+- Helpers de red: src/lib/*.ts
+- Componentes reutilizables: src/components/*
+
+8) Prueba del flujo completo
+1) Abrir http://localhost:3000/login y autenticarse.
+2) Ir a http://localhost:3000/backlog.
+3) Probar filtros (Persona/Sprint/Épica/Estado).
+4) Cambiar agrupación (Proyecto/Epica/Sprint/Ninguno).
+5) Usar botones:
+   - Cambiar categoría → PATCH /tareas/{id}/categoria/
+   - ✅ Cerrar tarea → PATCH /tareas/{id}/estado/
+
+9) Errores frecuentes
+- Failed to fetch → revisa NEXT_PUBLIC_API_BASE y credentials:'include'.
+- 405 en logout → logout es POST, no GET.
+- HTML en /me/ → sesión expirada; redirige a /login.
+- CORS/allowedDevOrigins → agregar el host/IP en next.config.ts si navegas por IP.
+
+10) Siguientes mejoras (luego del MVP)
+- Menús de acción inline en cada tarjeta
+- Paginación/carga diferida
+- Tableros Kanban y Matriz (drag & drop) con los endpoints existentes
+- Extraer filtros y tarjeta a componentes en /components

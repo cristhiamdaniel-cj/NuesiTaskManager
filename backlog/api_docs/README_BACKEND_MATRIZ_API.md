@@ -1,55 +1,67 @@
-# NEUSI Task Manager – API de Matriz Eisenhower
+NEUSI Task Manager – API de Matriz Eisenhower
 
-**Módulo:** Matriz de Prioridades (UI/NUI/UNI/NUNI)  
-**Framework:** Django 5.2  
-**Ruta base:** `/api/backlog/matriz/`  
-**Versión:** Octubre 2025  
-**Desarrollado por:** Jorge Cardona
+Módulo: Matriz de Prioridades
+Framework: Django 5.2
+Ruta base: /api/backlog/matriz/
+Versión: Octubre 2025
+Desarrollado por: Jorge Cardona
+=========================================================================
+Descripción general
 
---------------------------------------------------------------------------------------
-## Descripción general
-La **matriz Eisenhower** clasifica las tareas según su urgencia e importancia:
+La matriz Eisenhower permite visualizar las tareas clasificadas según urgencia e importancia:
+=========================================================================
+Categoría	Significado
+UI	Urgente e Importante
+NUI	No Urgente e Importante
+UNI	Urgente y No Importante
+NUNI	No Urgente y No Importante
+=========================================================================
+Endpoint principal
 
-| Categoría | Significado |
-|------------|-------------|
-| **UI** | Urgente e Importante |
-| **NUI** | No urgente pero importante |
-| **UNI** | Urgente pero no importante |
-| **NUNI** | Ni urgente ni importante |
+GET /api/backlog/matriz/
+Respuesta:
 
---------------------------------------------------------------------------------------
-## Endpoint principal
-
-### 1 Obtener matriz completa
-**GET** `/api/backlog/matriz/`
-
-**Respuesta 200:**
-```json
 {
   "ui": [
-    { "id": 1, "titulo": "Configurar DRF", "estado": "NUEVO" }
+    { "id": 12, "titulo": "Resolver bug crítico", "categoria": "UI" }
   ],
   "nui": [
-    { "id": 2, "titulo": "Doc API para Next", "estado": "COMPLETADO" }
+    { "id": 14, "titulo": "Documentar backlog", "categoria": "NUI" }
   ],
-  "uni": [
-    { "id": 3, "titulo": "Ajustar estilos", "estado": "EN_PROGRESO" }
-  ],
-  "nuni": [
-    { "id": 4, "titulo": "Iconos definitivos", "estado": "NUEVO" }
-  ]
+  "uni": [],
+  "nuni": []
 }
---------------------------------------------------------------------------------------
+=========================================================================
+Parámetros opcionales
+| Parámetro | Descripción                         |
+| --------- | ----------------------------------- |
+| `persona` | Filtra por integrante               |
+| `sprint`  | Filtra por sprint                   |
+| `epica`   | Filtra por épica                    |
+| `mine=1`  | Solo tareas del usuario autenticado |
+
+=========================================================================
 Reglas para el Frontend
-Cada grupo (ui, nui, uni, nuni) corresponde a una columna o cuadrante visual.
-Puede usarse para construir drag & drop o dashboard de tareas.
-Si una tarea cambia de cuadrante, usar:
-PATCH /api/backlog/tareas/{id}/categoria/
---------------------------------------------------------------------------------------
+
+Requiere autenticación (credentials: include).
+
+=========================================================================
+Mostrar cada cuadrante con color:
+
+🔴 UI, 🟢 NUI, 🟡 UNI, ⚫ NUNI.
+
+Ideal para tablero visual tipo “drag & drop” (opcional).
+
+Lectura simple: solo GET, sin modificaciones.
+
+=========================================================================
 Estado del módulo
-Funcionalidad		Observaciones
-Generación de matriz		OK
-Integración con tareas		OK
---------------------------------------------------------------------------------------
-Autor: Jorge Cardona – Backend Developer
-Octubre 2025
+Funcionalidad	Estado
+Listado por cuadrantes	✅ OK
+Filtros integrados	✅ OK
+CSRF y sesión	✅ OK
+
+=========================================================================
+Autor: Jorge Luis Cardona Gregory
+Rol: Backend Developer
+Fecha: Octubre 2025

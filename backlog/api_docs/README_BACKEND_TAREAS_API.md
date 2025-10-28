@@ -1,109 +1,104 @@
-#  NEUSI Task Manager – API de Tareas (Backend)
+NEUSI Task Manager – API de Tareas (Backend)
+=========================================================================
+Módulo: Gestión de Tareas
+Framework: Django 5.2
+Ruta base: /api/backlog/tareas/
+Versión: Octubre 2025
+Desarrollado por: Jorge Cardona
+=========================================================================
+Descripción general
 
-**Módulo:** Gestión de Tareas  
-**Framework:** Django 5.2  
-**Ruta base:** `/api/backlog/tareas/`  
-**Versión:** Octubre 2025  
-**Desarrollado por:** Jorge Cardona
---------------------------------------------------------------------------------------
+Las tareas son las unidades mínimas de trabajo del backlog.
+Cada tarea puede pertenecer a un sprint, épica o proyecto, y tener varios asignados.
+=========================================================================
+Endpoints principales
+1️⃣ Crear tarea
 
-##  Descripción general
-Las **tareas** son los elementos base del backlog.  
-Cada tarea pertenece a una **épica**, un **sprint** y puede cambiar de estado o categoría según avance el proyecto.
-
---------------------------------------------------------------------------------------
-
-##  Endpoints principales
-
-### 1 Crear tarea
-**POST** `/api/backlog/tareas/`
-```json
-{
-  "titulo": "Configurar DRF",
-  "descripcion": "Serializers y ViewSets",
-  "categoria": "UI",
-  "estado": "NUEVO",
-  "asignado_a_id": 1,
-  "sprint_id": 1,
-  "epica_id": 1
-}
-Respuesta (201):
+POST /api/backlog/tareas/
 
 {
-  "id": 1,
-  "titulo": "Configurar DRF",
-  "estado": "NUEVO",
+  "titulo": "Integrar vista Kanban",
+  "descripcion": "Diseñar la interfaz y lógica drag & drop",
   "categoria": "UI",
-  "sprint": { "id": 1, "nombre": "Sprint 1" },
-  "epica": { "id": 1, "nombre": "Épica - Backlog NEUSI" }
+  "sprint_id": 5,
+  "epica_id": 7,
+  "asignado_a": 3
 }
---------------------------------------------------------------------------------------
-2 Listar tareas
-GET /api/backlog/tareas/
+=========================================================================
+2️⃣ Listar tareas (con filtros opcionales)
 
-Respuesta:
-
+GET /api/backlog/tareas/?persona=3&sprint=5&estado=abiertas
 
 [
   {
-    "id": 1,
-    "titulo": "Configurar DRF",
-    "categoria": "NUI",
-    "estado": "NUEVO"
+    "id": 10,
+    "titulo": "Integrar vista Kanban",
+    "categoria": "UI",
+    "epica": "Backlog NEUSI",
+    "sprint": "Sprint 10",
+    "asignado_a": "jorge",
+    "completada": false
   }
 ]
---------------------------------------------------------------------------------------
+=========================================================================
+3️⃣ Actualizar parcialmente (PATCH)
 
-3 Filtrar tareas
-Por sprint:
-GET /api/backlog/tareas/?sprint=1
+PATCH /api/backlog/tareas/{id}/
 
-Por estado:
-GET /api/backlog/tareas/?estado=EN_PROGRESO
---------------------------------------------------------------------------------------
+{ "titulo": "Integrar matriz Eisenhower" }
+=========================================================================
+4️⃣ Cambiar categoría
 
-4 Cambiar categoría (mover en matriz)
 PATCH /api/backlog/tareas/{id}/categoria/
+
 { "categoria": "NUI" }
-Respuesta (200):
+=========================================================================
+5️⃣ Cambiar estado
 
-
-{ "ok": true, "categoria": "NUI" }
---------------------------------------------------------------------------------------
-
-5 Cambiar estado (kanban)
 PATCH /api/backlog/tareas/{id}/estado/
 
-
 { "estado": "COMPLETADO" }
-Respuesta (200):
 
 
-{ "ok": true, "estado": "COMPLETADO" }
---------------------------------------------------------------------------------------
-6 Eliminar tarea
+Efecto: Marca la tarea como completada y registra la fecha de cierre.
+=========================================================================
+6️⃣ Crear evidencia
+
+POST /api/backlog/tareas/{id}/evidencias/
+
+{ "descripcion": "Informe final de validación" }
+=========================================================================
+7️⃣ Eliminar tarea
+
 DELETE /api/backlog/tareas/{id}/
+Respuesta: 204 No Content
 
-Respuesta:
-204 No Content
---------------------------------------------------------------------------------------
-
+Filtros disponibles
+Parámetro	Descripción
+persona	ID del integrante asignado
+sprint	ID del sprint
+epica	ID de la épica
+estado	abiertas o cerradas
+mine=1	Muestra solo las tareas del usuario actual
 Reglas para el Frontend
-Campos clave: titulo, descripcion, categoria, estado.
-Las tareas se agrupan por categoría en la matriz y por estado en el tablero kanban.
-Usar credentials: 'include' y X-CSRFToken en todos los métodos que modifiquen datos.
 
---------------------------------------------------------------------------------------
+Requiere login (CSRF + sessionid).
+=========================================================================
+Mostrar badges según categoria:
 
+🔴 UI, 🟢 NUI, 🟡 UNI, ⚫ NUNI.
+
+Los campos estado y categoria se actualizan con acciones PATCH.
+
+Asociar evidencias como anexos o comentarios visuales.
+=========================================================================
 Estado del módulo
-Funcionalidad	Estado	
-Crear	        	OK
-Listar		        OK
-Cambiar categoría	OK
-Cambiar estado		OK
-Eliminar		    OK
-
---------------------------------------------------------------------------------------
-
-Autor: Jorge Cardona – Backend Developer
-Octubre 2025
+Funcionalidad	Estado
+CRUD completo	✅ OK
+Filtros	✅ OK
+Acciones PATCH	✅ OK
+Evidencias	✅ OK
+=========================================================================
+Autor: Jorge Luis Cardona Gregory
+Rol: Backend Developer
+Fecha: Octubre 2025

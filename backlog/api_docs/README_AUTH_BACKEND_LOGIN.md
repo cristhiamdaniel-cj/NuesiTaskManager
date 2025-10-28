@@ -1,143 +1,106 @@
-NEUSI Task Manager – API de Autenticación (Backend)
+# NEUSI Task Manager – API de Autenticación (Backend)
 
-**Desarrollado por:** Jorge Cardona  
-**Framework:** Django 5.2  
-**Puerto local:** 8076  
-**Base URL (entorno local):** `http://localhost:8076`
+**Desarrollado por:** Jorge Cardona
+**Framework:** Django 5.2
+**Puerto local:** 8076
+=========================================================================
 
-> 🔁 En producción / ngrok reemplazar base por:
-> `https://devops-neusi.ngrok.io`  
-> Mantener el mismo path `/api/auth/`
+Base: /api/backlog/auth/
+=========================================================================
+1) Obtener CSRF
 
------------------------------------------------------------
+GET /csrf/
 
-##  Endpoints de Autenticación
+200 → setea cookie csrftoken (necesaria para POST/PATCH/DELETE).
+=========================================================================
+2) Login
 
-### 1 Obtener CSRF Token
-**Método:** `GET`  
-**URL:** `/api/auth/csrf/`  
-**Respuesta 200:**
-```json
-{ "detail": "CSRF cookie set", "csrfToken": "<valor opcional>" }
-Efecto:
-Crea una cookie csrftoken en el navegador, necesaria antes de cualquier POST, PUT, PATCH o DELETE.
+POST /login/
 
-Notas:
-
-Debe llamarse antes de cualquier envío de datos.
-
-Django rota este token tras cada login → refrescar después de autenticarse.
-
-----------------------------------------------------------------------------------------------
-2 Iniciar sesión (Login)
-Método: POST
-URL: /api/auth/login/
-
-Headers requeridos:
-Content-Type: application/json
-X-CSRFToken: <valor de la cookie csrftoken>
+Headers: Content-Type: application/json, X-CSRFToken: <csrftoken>
 
 Body:
 
 { "username": "jorge", "password": "Jorge2025." }
-Respuesta exitosa 200:
 
+
+200:
 
 {
-  "id": 1,
+  "id": 4,
   "username": "jorge",
-  "rol": "Scrum Master / PO",
+  "first_name": "",
+  "rol": null,
   "is_authenticated": true,
   "must_change_password": false
 }
-Respuesta 400 (error):
 
-{ "error": "Usuario o contraseña incorrectos" }
-Efecto:
-Genera una cookie sessionid (sesión activa) y actualiza csrftoken.
 
-----------------------------------------------------------------------------------------------
-3 Usuario actual (Ver sesión)
-Método: GET
-URL: /api/auth/me/
+Efecto: crea cookie sessionid y rota csrftoken.
+=========================================================================
+3) Usuario actual
 
-Respuesta 200 (autenticado):
+GET /me/
 
-{
-  "id": 1,
-  "username": "jorge",
-  "rol": "Scrum Master / PO",
-  "is_authenticated": true
-}
-Sin sesión:
-Retorna 302 Redirect a la página de login (HTML).
-→ En frontend, detectar si la respuesta no es JSON para asumir “no autenticado”.
+200 autenticado:
 
-----------------------------------------------------------------------------------------------
-4 Cerrar sesión (Logout)
-Método: POST
-URL: /api/auth/logout/
+{ "id": 4, "username": "jorge", "first_name": "", "rol": null, "is_authenticated": true }
 
-Headers:
 
-X-CSRFToken: <valor actual de csrftoken>
+200 sin sesión:
 
-Respuesta 200:
+{ "id": null, "is_authenticated": false }
+=========================================================================
+4) Logout
+
+POST /logout/
+
+Headers: X-CSRFToken: <csrftoken actual>
+
+200:
 
 { "detail": "Sesión cerrada" }
-Efecto:
-Elimina la cookie sessionid → el usuario queda deslogueado.
+=========================================================================
+Ejemplo (Next.js)
+const API = '/api/backlog';
 
-----------------------------------------------------------------------------------------------
-Reglas generales para Frontend (Next.js)
-Usar siempre credentials: "include" para que el navegador envíe cookies.
-Incluir X-CSRFToken en todos los métodos que modifiquen datos (POST, PUT, PATCH, DELETE).
-Refrescar /api/auth/csrf/ después del login.
-Si /api/auth/me/ devuelve HTML o 403 → sesión expirada.
+function getCookie(name: string) {
+  return document.cookie.split('; ')
+    .find(x => x.startsWith(name + '='))?.split('=')[1] ?? '';
+}
 
-----------------------------------------------------------------------------------------------
-Ejemplo de flujo en Next.js:
+export async function me() {
+  const r = await fetch(`${API}/auth/me/`, { credentials: 'include' });
+  return r.json();
+}
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE;
+export async function login(username: string, password: string) {
+  await fetch(`${API}/auth/csrf/`, { credentials: 'include' });
+  const csrftoken = getCookie('csrftoken');
+  const r = await fetch(`${API}/auth/login/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!r.ok) throw new Error(`Login failed (${r.status})`);
+  return r.json();
+}
 
-await fetch(`${BASE}/api/auth/csrf/`, { credentials: 'include' });
-
-await fetch(`${BASE}/api/auth/login/`, {
-  method: 'POST',
-  credentials: 'include',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-CSRFToken': document.cookie
-      .split('; ')
-      .find(r => r.startsWith('csrftoken='))?.split('=')[1] || ''
-  },
-  body: JSON.stringify({ username: 'jorge', password: 'Jorge2025.' })
-});
-
-----------------------------------------------------------------------------------------------
-Variables de entorno (Frontend)
-Archivo .env.local:
-
-ini
-Copiar código
-NEXT_PUBLIC_API_BASE=http://localhost:8076
-Uso:
+export async function logout() {
+  const csrftoken = getCookie('csrftoken');
+  const r = await fetch(`${API}/auth/logout/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+    body: '{}',
+  });
+  return r.json();
+}
 
 
-fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/auth/me/`)
+---
 
-----------------------------------------------------------------------------------------------
- Pruebas rápidas (Postman / CURL)
-GET /api/auth/csrf/
-POST /api/auth/login/
-GET /api/auth/me/
-POST /api/auth/logout/
---------------------------------------------------------------------------------------------
-Estado actual
-Módulo	                  Estado	                    Próximo paso
-Auth (Login/Logout)	 Terminado y probado	    Ya esta Completado el font Next.js funcional
-
---------------------------------------------------------------------------------------------
-Autor:
+**Autor**
 Jorge Luis Cardona Gregory
 Backend Developer – Octubre 2025
