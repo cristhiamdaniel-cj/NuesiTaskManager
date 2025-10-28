@@ -1,21 +1,69 @@
+from datetime import datetime
+import json
+
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import Integrante, Epica, Sprint, Tarea, Evidencia
-from .serializers import IntegranteSerializer, EpicaSerializer, SprintSerializer, TareaSerializer, EvidenciaSerializer
+from rest_framework.response import Response
+from django.utils.timezone import now
+
+from ..models import Integrante, Proyecto, Epica, Sprint, Tarea, Evidencia
+from .serializers import (
+    IntegranteSerializer, ProyectoSerializer, EpicaSerializer,
+    SprintSerializer, TareaSerializer, EvidenciaSerializer
+)
 from .permissions import IsBacklogAdmin, IsOwnerOrAdmin
 
+# ===== Helpers de scope (visualizador por proyectos) =====
+def _proyectos_autorizados_qs(integrante):
+    if not integrante:
+        return Proyecto.objects.none()
+    if integrante.es_admin():
+        return Proyecto.objects.all()
+    if integrante.es_visualizador():
+        return Proyecto.objects.filter(
+            permisos_integrantes__integrante=integrante,
+            permisos_integrantes__activo=True,
+            activo=True
+        ).distinct()
+    return Proyecto.objects.none()
+
+def _filtrar_tareas_por_scope(qs, integrante):
+    """Restringe Tarea por proyectos autorizados a visualizador; miembros ven solo las suyas."""
+    if not integrante:
+        return qs.none()
+    if integrante.es_admin():
+        return qs
+    if integrante.es_visualizador():
+        proys = _proyectos_autorizados_qs(integrante)
+        if not proys.exists():
+            return qs.none()
+        return qs.filter(epica__proyecto__in=proys).distinct()
+    # miembro normal
+    return qs.filter(asignados=integrante).union(qs.filter(asignado_a=integrante)).distinct()
+
+# ===== ViewSets =====
 class IntegranteViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = IntegranteSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         return Integrante.objects.select_related("user").all().order_by("user__first_name","user__last_name")
 
+class ProyectoViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ProyectoSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Proyecto.objects.all().order_by("codigo")
+
 class EpicaViewSet(viewsets.ModelViewSet):
     serializer_class = EpicaSerializer
     permission_classes = [IsAuthenticated, IsBacklogAdmin]
-    queryset = Epica.objects.select_related("owner").all().order_by("-creada_en")
+    queryset = (
+        Epica.objects
+        .select_related("owner", "proyecto")
+        .prefetch_related("owners__user", "sprints")
+        .all()
+        .order_by("-creada_en")
+    )
 
 class SprintViewSet(viewsets.ModelViewSet):
     serializer_class = SprintSerializer
@@ -25,35 +73,45 @@ class SprintViewSet(viewsets.ModelViewSet):
 class TareaViewSet(viewsets.ModelViewSet):
     serializer_class = TareaSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
-    queryset = Tarea.objects.select_related("asignado_a__user","sprint","epica").all().order_by("sprint__inicio","categoria","id")
+    queryset = (
+        Tarea.objects
+        .select_related("asignado_a__user", "sprint", "epica", "epica__proyecto")
+        .prefetch_related("asignados__user")
+        .all()
+        .order_by("sprint__inicio", "categoria", "id")
+    )
 
     def get_queryset(self):
         qs = super().get_queryset()
         i = getattr(self.request.user, "integrante", None)
-        persona = self.request.query_params.get("persona")
-        sprint = self.request.query_params.get("sprint")
-        epica = self.request.query_params.get("epica")
-        estado = self.request.query_params.get("estado")
-        mine = self.request.query_params.get("mine")
+        qs = _filtrar_tareas_por_scope(qs, i)
 
-        if not (i and i.puede_crear_tareas()):
-            qs = qs.filter(asignado_a=i)
+        # Filtros
+        qp = self.request.query_params
+        if qp.get("persona"):
+            qs = qs.filter(asignado_a_id=qp["persona"]) | qs.filter(asignados__id=qp["persona"])
+        if qp.get("sprint"):
+            qs = qs.filter(sprint_id=qp["sprint"])
+        if qp.get("epica"):
+            qs = qs.filter(epica_id=qp["epica"])
+        estado = qp.get("estado")
+        if estado == "abiertas":
+            qs = qs.filter(completada=False)
+        elif estado == "cerradas":
+            qs = qs.filter(completada=True)
+        if qp.get("mine") == "1" and i:
+            qs = qs.filter(asignados=i) | qs.filter(asignado_a=i)
 
-        if persona: qs = qs.filter(asignado_a_id=persona)
-        if sprint: qs = qs.filter(sprint_id=sprint)
-        if epica: qs = qs.filter(epica_id=epica)
-        if estado == "abiertas": qs = qs.filter(completada=False)
-        elif estado == "cerradas": qs = qs.filter(completada=True)
-        if mine == "1": qs = qs.filter(asignado_a=i)
-        return qs
+        return qs.distinct()
 
+    # ----- Acciones Kanban / Matriz -----
     @action(methods=["patch"], detail=True, url_path="categoria")
     def cambiar_categoria(self, request, pk=None):
         tarea = self.get_object()
         categoria = (request.data.get("categoria") or "").upper()
         validas = {c[0] for c in Tarea.MATRIZ_CHOICES}
         if categoria not in validas:
-            return Response({"detail":"Categoria inválida"}, status=400)
+            return Response({"detail": "Categoría inválida"}, status=400)
         tarea.categoria = categoria
         tarea.save(update_fields=["categoria"])
         return Response({"ok": True, "categoria": tarea.categoria})
@@ -64,11 +122,16 @@ class TareaViewSet(viewsets.ModelViewSet):
         estado = (request.data.get("estado") or "").upper()
         validos = {c[0] for c in Tarea.ESTADO_CHOICES}
         if estado not in validos:
-            return Response({"detail":"Estado inválido"}, status=400)
+            return Response({"detail": "Estado inválido"}, status=400)
+
         tarea.estado = estado
         if estado == "COMPLETADO":
             tarea.completada = True
-        tarea.save(update_fields=["estado","completada"])
+            if not tarea.fecha_cierre:
+                tarea.fecha_cierre = now()
+            tarea.save(update_fields=["estado", "completada", "fecha_cierre"])
+        else:
+            tarea.save(update_fields=["estado"])
         return Response({"ok": True, "estado": tarea.estado})
 
     @action(methods=["post"], detail=True, url_path="evidencias", permission_classes=[IsAuthenticated])
@@ -80,21 +143,27 @@ class TareaViewSet(viewsets.ModelViewSet):
             return Response(EvidenciaSerializer(ev).data, status=201)
         return Response(serializer.errors, status=400)
 
+# ----- Matriz (colección) -----
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def matriz_eisenhower(request):
     i = getattr(request.user, "integrante", None)
-    base = Tarea.objects.select_related("asignado_a__user","sprint","epica").order_by("sprint__inicio","id")
-    if not (i and i.puede_crear_tareas()):
-        base = base.filter(asignado_a=i)
+    base = (
+        Tarea.objects
+        .select_related("asignado_a__user","sprint","epica","epica__proyecto")
+        .prefetch_related("asignados__user")
+        .order_by("sprint__inicio","id")
+    )
+    base = _filtrar_tareas_por_scope(base, i)
 
     for key, field in [("persona","asignado_a_id"),("sprint","sprint_id"),("epica","epica_id")]:
         val = request.query_params.get(key)
-        if val: base = base.filter(**{field: val})
-    if request.query_params.get("mine") == "1":
-        base = base.filter(asignado_a=i)
+        if val:
+            base = base.filter(**{field: val})
+    if request.query_params.get("mine") == "1" and i:
+        base = base.filter(asignados=i) | base.filter(asignado_a=i)
 
-    ser = lambda qs: TareaSerializer(qs, many=True).data
+    ser = lambda qs: TareaSerializer(qs.distinct(), many=True).data
     return Response({
         "ui": ser(base.filter(categoria="UI")),
         "nui": ser(base.filter(categoria="NUI")),

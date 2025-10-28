@@ -1,26 +1,23 @@
-import type { NextConfig } from 'next'
+import type { NextConfig } from "next";
 
 /**
- * Base del backend. Ajusta según entorno:
- * - Local LAN: http://10.100.42.36:8076
- * - Producción/ngrok: https://devops-neusi.ngrok.io
+ * Configuración de conexión al backend Django.
+ * Puedes cambiar la IP o dominio si trabajas desde otra red.
+ * Ejemplo LAN: http://10.100.42.36:8076
  */
-const BACKEND_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || 'http://10.100.42.36:8076'
+const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8076";
 
 const nextConfig: NextConfig = {
-  experimental: {
-  // @ts-expect-error - allowedDevOrigins aún no está tipado en Next.js
-  allowedDevOrigins: [
-    'http://10.100.42.36:3000',
-    'http://localhost:3000',
-  ],
-},
+  // Reescribe las peticiones /api/* hacia el backend Django
   async rewrites() {
     return [
-      { source: '/api/:path*', destination: `${BACKEND_BASE}/api/:path*` },
-    ]
+      { source: "/api/:path*", destination: `${BACKEND_BASE}/api/:path*` },
+    ];
   },
-}
 
-export default nextConfig
+  // Opcionalmente, si vas a exportar estático:
+  reactStrictMode: true,
+  swcMinify: true,
+};
+
+export default nextConfig;

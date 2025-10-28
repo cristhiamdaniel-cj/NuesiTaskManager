@@ -1,6 +1,9 @@
+# backlog/api_router.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import IntegranteViewSet, EpicaViewSet, SprintViewSet, TareaViewSet, matriz_eisenhower
+from .api.views import (
+    IntegranteViewSet, EpicaViewSet, SprintViewSet, TareaViewSet, matriz_eisenhower
+)
 
 router = DefaultRouter()
 router.register(r'integrantes', IntegranteViewSet, basename='integrante')

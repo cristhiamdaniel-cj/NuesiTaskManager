@@ -15,7 +15,8 @@ SECRET_KEY = 'django-insecure-kzm9r)eo08het9l9-6yf+ei71$ku-asgc0$4kqo-klz2pqvrcx
 DEBUG = True
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'devops-neusi.ngrok.io','192.168.2.29', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.2.29', '10.100.42.36', 'devops-neusi.ngrok.io', '*']
+
 # CSRF Configuration for ngrok
 CSRF_TRUSTED_ORIGINS = [
     'https://devops-neusi.ngrok.io',
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',     # integracion CORS/JC
     'django.middleware.common.CommonMiddleware', # integracion CORS/JC
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
 
@@ -57,14 +59,22 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://192.168.2.29:3000',
-    'https://devops-neusi.ngrok.io'
+    'http://10.100.42.36:3000',
+    'https://devops-neusi.ngrok.io',
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS += [
-    'http://localhost:8076', 'http://127.0.0.1:8076',  # backend local
-    'http://192.168.2.29:8076',                        # backend por IP
-    'http://localhost:3000', 'http://192.168.2.29:3000',  # 👈 FRONTEND (importante)
     'https://devops-neusi.ngrok.io',
+    'http://devops-neusi.ngrok.io',
+    # backends
+    'http://localhost:8076',
+    'http://127.0.0.1:8076',
+    'http://192.168.2.29:8076',
+    'http://10.100.42.36:8076',
+    # frontends
+    'http://localhost:3000',
+    'http://192.168.2.29:3000',
+    'http://10.100.42.36:3000',
 ]
 
 # Cookies de dev (ajusta a True si usas HTTPS)/JC---
