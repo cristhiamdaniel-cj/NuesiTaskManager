@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 import json
-
+from django.db.models import Q
 from django.utils.timezone import now
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import action, api_view, permission_classes
@@ -33,9 +33,7 @@ def _proyectos_autorizados_qs(integrante):
 
 
 def _filtrar_tareas_por_scope(qs, integrante):
-    """
-    Restringe Tarea por proyectos autorizados a visualizador; miembros ven solo las suyas.
-    """
+    """Restringe Tarea por proyectos autorizados a visualizador; miembros ven solo las suyas."""
     if not integrante:
         return qs.none()
     if integrante.es_admin():
@@ -45,9 +43,8 @@ def _filtrar_tareas_por_scope(qs, integrante):
         if not proys.exists():
             return qs.none()
         return qs.filter(epica__proyecto__in=proys).distinct()
-    # miembro normal
-    return qs.filter(asignados=integrante).union(qs.filter(asignado_a=integrante)).distinct()
-
+    # miembro normal -> OR sin union()
+    return qs.filter(Q(asignados=integrante) | Q(asignado_a=integrante)).distinct()
 
 # ===== ViewSets =====
 class IntegranteViewSet(EnvelopeMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -97,27 +94,28 @@ class TareaViewSet(EnvelopeMixin, viewsets.ModelViewSet):
         .all()
         .order_by("sprint__inicio", "categoria", "id")
     )
-
     def get_queryset(self):
         qs = super().get_queryset()
         i = getattr(self.request.user, "integrante", None)
         qs = _filtrar_tareas_por_scope(qs, i)
 
-        # Filtros
         qp = self.request.query_params
         if qp.get("persona"):
-            qs = qs.filter(asignado_a_id=qp["persona"]) | qs.filter(asignados__id=qp["persona"])
+            pid = qp["persona"]
+            qs = qs.filter(Q(asignado_a_id=pid) | Q(asignados__id=pid))
         if qp.get("sprint"):
             qs = qs.filter(sprint_id=qp["sprint"])
         if qp.get("epica"):
             qs = qs.filter(epica_id=qp["epica"])
+
         estado = qp.get("estado")
         if estado == "abiertas":
             qs = qs.filter(completada=False)
         elif estado == "cerradas":
             qs = qs.filter(completada=True)
+
         if qp.get("mine") == "1" and i:
-            qs = qs.filter(asignados=i) | qs.filter(asignado_a=i)
+            qs = qs.filter(Q(asignados=i) | Q(asignado_a=i))
 
         return qs.distinct()
 

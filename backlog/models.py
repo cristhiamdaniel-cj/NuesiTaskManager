@@ -150,15 +150,30 @@ class Epica(models.Model):
     ]
     PRIORIDAD_CHOICES = [("ALTA", "Alta"), ("MEDIA", "Media"), ("BAJA", "Baja")]
 
-    codigo = models.CharField(max_length=20, unique=True, null=True, blank=True,
-                              help_text="Código legible (ej. NEUSI-001).")
+    codigo = models.CharField(
+        max_length=20, unique=True, null=True, blank=True,
+        help_text="Código legible (ej. NEUSI-001)."
+    )
+
+    # --- Campo existente (se mantiene) ---
     titulo = models.CharField(max_length=200, unique=True)
+
+    # --- Campo nuevo para alinear con la API/Swagger ---
+    # No lo marcamos unique para evitar conflictos al migrar en entornos con datos;
+    # 'titulo' sigue siendo la clave única canónica.
+    nombre = models.CharField(
+        max_length=200, null=True, blank=True, db_index=True,
+        help_text="Alias de 'titulo' para compatibilidad con la API."
+    )
+
     descripcion = models.TextField(blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default="ACTIVA")
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default="MEDIA")
 
-    proyecto = models.ForeignKey("Proyecto", on_delete=models.PROTECT, null=True, blank=True,
-                                 related_name="epicas", help_text="Proyecto al que pertenece esta épica.")
+    proyecto = models.ForeignKey(
+        "Proyecto", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="epicas", help_text="Proyecto al que pertenece esta épica."
+    )
 
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin    = models.DateField(null=True, blank=True)
@@ -166,17 +181,22 @@ class Epica(models.Model):
     kpis = models.TextField(blank=True, help_text="Métricas clave esperadas para la épica")
 
     # Avance manual 0–100; si None se calcula por tareas
-    avance_manual = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                    help_text="0–100. Si se deja vacío, se calcula por tareas.")
+    avance_manual = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="0–100. Si se deja vacío, se calcula por tareas."
+    )
 
     # Responsable legacy + múltiples responsables
-    owner  = models.ForeignKey("Integrante", on_delete=models.SET_NULL, null=True, blank=True,
-                               related_name="epicas_propias")
-    owners = models.ManyToManyField("Integrante", blank=True, related_name="epicas_cocreadas",
-                                    help_text="Responsables/co-owners de la épica")
+    owner  = models.ForeignKey(
+        "Integrante", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="epicas_propias"
+    )
+    owners = models.ManyToManyField(
+        "Integrante", blank=True, related_name="epicas_cocreadas",
+        help_text="Responsables/co-owners de la épica"
+    )
 
     sprints = models.ManyToManyField("Sprint", blank=True, related_name="epicas")
-
     documentos_url = models.URLField(blank=True, help_text="Enlace a carpeta o documento maestro")
 
     creada_en = models.DateTimeField(auto_now_add=True)
@@ -212,10 +232,23 @@ class Epica(models.Model):
     sprints_list.short_description = "Sprints"
 
     def clean(self):
+        from django.core.exceptions import ValidationError
         if self.fecha_inicio and self.fecha_fin and self.fecha_inicio > self.fecha_fin:
             raise ValidationError("La fecha de inicio no puede ser posterior a la fecha fin.")
         if self.avance_manual is not None and not (0 <= self.avance_manual <= 100):
             raise ValidationError("El avance manual debe estar entre 0 y 100.")
+
+    def save(self, *args, **kwargs):
+        """
+        Sincroniza 'nombre' y 'titulo' para compatibilidad:
+        - Si viene 'nombre' y no 'titulo', copia a 'titulo'.
+        - Si viene 'titulo' y no 'nombre', copia a 'nombre'.
+        """
+        if (self.nombre and not self.titulo):
+            self.titulo = self.nombre
+        if (self.titulo and not self.nombre):
+            self.nombre = self.titulo
+        super().save(*args, **kwargs)
 
 # ==============================
 # Tarea
