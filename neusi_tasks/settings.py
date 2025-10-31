@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',          # 🧩 nuevo JC
-    'drf_spectacular.sidecar',  # 🧩 nuevo JC (activos locales)
+    'drf_spectacular_sidecar',  # 🧩 nuevo JC (activos locales)
 ]
 
 MIDDLEWARE = [
