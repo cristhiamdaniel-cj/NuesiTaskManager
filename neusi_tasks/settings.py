@@ -91,6 +91,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "EXCEPTION_HANDLER": ["backlog.api.exceptions.custom_exception_handler"
+    ],
 }
 
 ROOT_URLCONF = 'neusi_tasks.urls'
