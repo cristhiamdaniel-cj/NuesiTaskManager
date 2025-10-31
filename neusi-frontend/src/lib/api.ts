@@ -1,7 +1,7 @@
 // src/lib/api.ts
 // API base (absoluta, evita problemas de proxy en Next)
-const ABS = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/+$/, "") || "http://localhost:8076";
-export const API = `${ABS}/api/backlog`;
+const ABS = (process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api/backlog").replace(/\/+$/,"");
+export const API = ABS;
 
 // --- Utilidad para obtener cookie CSRF ---
 function getCookie(name: string) {
